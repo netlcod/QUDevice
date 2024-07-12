@@ -5,6 +5,7 @@ This library contains a collection of wrappers (asynchronous (non-blocking) and 
 
 Device list:
 - serial port
+- udp socket
 
 ## Build flags
 - select shared or static build: BUILD_SHARED_LIBS

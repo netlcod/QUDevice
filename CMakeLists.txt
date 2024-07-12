@@ -11,6 +11,8 @@ option(QUDEVICE_INSTALL "Install available devices" OFF)
 option(BUILD_ALL_QUDEVICES "Build all available devices" OFF)
 option(BUILD_QUASYNCSERIALPORT "BUILD_QUASYNCSERIALPORT" OFF)
 option(BUILD_QUBLOCKINGSERIALPORT "BUILD_QUBLOCKINGSERIALPORT" OFF)
+option(BUILD_QUASYNCUDP "BUILD_QUASYNCUDP" OFF)
+option(BUILD_QUBLOCKINGUDP "BUILD_QUBLOCKINGUDP" OFF)
 
 if (BUILD_ALL_QUDEVICES OR BUILD_QUASYNCSERIALPORT)
     add_subdirectory(devices/quasyncserialport)
@@ -18,4 +20,12 @@ endif()
 
 if (BUILD_ALL_QUDEVICES OR BUILD_QUBLOCKINGSERIALPORT)
     add_subdirectory(devices/qublockingserialport)
+endif()
+
+if (BUILD_ALL_QUDEVICES OR BUILD_QUASYNCUDP)
+    add_subdirectory(devices/quasyncudp)
+endif()
+
+if (BUILD_ALL_QUDEVICES OR BUILD_QUBLOCKINGUDP)
+    add_subdirectory(devices/qublockingudp)
 endif()
