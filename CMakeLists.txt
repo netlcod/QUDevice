@@ -7,3 +7,15 @@ set(QUDEVICE_DIR ${CMAKE_SOURCE_DIR} CACHE STRING ${CMAKE_SOURCE_DIR})
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(QUDEVICE_INSTALL "Install available devices" OFF)
+
+option(BUILD_ALL_QUDEVICES "Build all available devices" OFF)
+option(BUILD_QUASYNCSERIALPORT "BUILD_QUASYNCSERIALPORT" OFF)
+option(BUILD_QUBLOCKINGSERIALPORT "BUILD_QUBLOCKINGSERIALPORT" OFF)
+
+if (BUILD_ALL_QUDEVICES OR BUILD_QUASYNCSERIALPORT)
+    add_subdirectory(devices/quasyncserialport)
+endif()
+
+if (BUILD_ALL_QUDEVICES OR BUILD_QUBLOCKINGSERIALPORT)
+    add_subdirectory(devices/qublockingserialport)
+endif()
