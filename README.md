@@ -6,6 +6,7 @@ This library contains a collection of wrappers (asynchronous (non-blocking) and 
 Device list:
 - serial port
 - udp socket
+- tcp client/server
 - modbus master (client)
 
 ## Build flags
