@@ -27,6 +27,12 @@ bool QUAsyncUdp::acquire() {
 
     m_udpSocket = QSharedPointer<QUdpSocket>::create();
 
+    if (!m_udpSocket) {
+        emit opened(false);
+        emit error(QString("Cannot create QUdpSocket!"));
+        return false;
+    }
+
     bindMode = QAbstractSocket::BindMode(cfg->bindMode());
     m_serverIp.setAddress(cfg->serverIp());
     m_serverPort = cfg->serverPort().toInt();
@@ -49,16 +55,26 @@ qint64 QUAsyncUdp::write(QByteArray data) {
 #ifdef QT_DEBUG
     qDebug() << "QUAsyncUdp::write" << m_name;
 #endif
-    return m_udpSocket->writeDatagram(data, data.size(), m_clientIp, m_clientPort);
+    if (m_udpSocket) {
+        return m_udpSocket->writeDatagram(data, data.size(), m_clientIp, m_clientPort);
+    } else {
+        emit error(QString("QUdpSocket nullptr"));
+        return -1;
+    }
 }
 
-void QUAsyncUdp::release() {
+bool QUAsyncUdp::release()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUAsyncUdp::release" << m_name;
 #endif
-    if (m_udpSocket->isOpen()) {
+    if (m_udpSocket && m_udpSocket->isOpen()) {
         m_udpSocket->close();
         emit closed();
+        return true;
+    } else {
+        emit error("QUdpSocket release error!");
+        return false;
     }
 }
 

@@ -18,7 +18,7 @@ public slots:
     bool acquire();
     qint64 write(QByteArray data);
     QByteArray read();
-    void release();
+    bool release();
 
 private slots:
     void onErrorOccurred(QAbstractSocket::SocketError error);
@@ -26,7 +26,7 @@ private slots:
 signals:
     void opened(bool status);
     void closed();
-    void error(const QString error);
+    void error(const QString error) const;
 
 private:
     QSharedPointer<QUdpSocket> m_udpSocket;

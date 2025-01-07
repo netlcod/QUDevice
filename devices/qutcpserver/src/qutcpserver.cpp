@@ -34,6 +34,11 @@ bool QUTcpServer::acquire() {
 
     m_tcpServer = QSharedPointer<QTcpServer>::create();
 
+    if (!m_tcpServer) {
+        emit error(QString("Cannot create QTcpServer!"));
+        return false;
+    }
+
     m_serverIp.setAddress(cfg->serverIp());
     m_serverPort = cfg->serverPort().toInt();
 
@@ -58,18 +63,24 @@ qint64 QUTcpServer::write(QString client, QByteArray data) {
     }
 }
 
-void QUTcpServer::release() {
+bool QUTcpServer::release()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUTcpServer::release" << m_name;
 #endif
-    if (m_tcpServer->isListening()) {
+    if (m_tcpServer && m_tcpServer->isListening()) {
         m_clients.clear();
         m_tcpServer->close();
         emit closed();
+        return true;
+    } else {
+        emit error("QTcpServer release error!");
+        return false;
     }
 }
 
-void QUTcpServer::onNewConnection() {
+void QUTcpServer::onNewConnection()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUTcpServer::onNewConnection" << m_name;
 #endif

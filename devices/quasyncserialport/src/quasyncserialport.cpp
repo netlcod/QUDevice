@@ -26,6 +26,12 @@ bool QUAsyncSerialPort::acquire() {
 
     m_port = QSharedPointer<QSerialPort>::create();
 
+    if (!m_port) {
+        emit opened(false);
+        emit error(QString("Cannot create QSerialPort!"));
+        return false;
+    }
+
     m_port->setPort(cfg->portInfo());
     m_port->setPortName(cfg->portName());
     m_port->setParity(cfg->parity());
@@ -58,18 +64,28 @@ bool QUAsyncSerialPort::acquire() {
 
 qint64 QUAsyncSerialPort::write(QByteArray data) {
 #ifdef QT_DEBUG
-    qDebug() << "QUAsyncUdp::write" << m_name;
+    qDebug() << "QUAsyncSerialPort::write" << m_name;
 #endif
-    return m_port->write(data);
+    if (m_port) {
+        return m_port->write(data);
+    } else {
+        emit error(QString("QSerialPort nullptr"));
+        return -1;
+    }
 }
 
-void QUAsyncSerialPort::release() {
+bool QUAsyncSerialPort::release()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUAsyncSerialPort::release" << m_name;
 #endif
-    if (m_port->isOpen()) {
+    if (m_port && m_port->isOpen()) {
         m_port->close();
         emit closed();
+        return true;
+    } else {
+        emit error("QSerialPort release error!");
+        return false;
     }
 }
 

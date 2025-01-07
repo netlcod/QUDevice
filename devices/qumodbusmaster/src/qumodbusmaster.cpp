@@ -29,6 +29,11 @@ bool QUModbusMaster::acquire() {
 
     if (cfg->masterType() == QUModbusMasterConfiguration::MasterType::Serial) {
         m_modbusDevice = QSharedPointer<QModbusRtuSerialMaster>::create();
+        if (!m_modbusDevice) {
+            emit opened(false);
+            emit error(QString("Cannot create QModbusRtuSerialMaster!"));
+            return false;
+        }
         m_modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, cfg->portName());
         m_modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, cfg->baudRate());
         m_modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, cfg->dataBits());
@@ -36,6 +41,11 @@ bool QUModbusMaster::acquire() {
         m_modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, cfg->stopBits());
     } else if (cfg->masterType() == QUModbusMasterConfiguration::MasterType::Tcp) {
         m_modbusDevice = QSharedPointer<QModbusTcpClient>::create();
+        if (!m_modbusDevice) {
+            emit opened(false);
+            emit error(QString("Cannot create QModbusTcpClient!"));
+            return false;
+        }
         m_modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, cfg->ip());
         m_modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, cfg->port());
     }
@@ -55,53 +65,76 @@ bool QUModbusMaster::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUModbusMaster::release" << m_name;
 #endif
-    if (m_modbusDevice->state() == QModbusDevice::ConnectedState) {
+    if (m_modbusDevice && m_modbusDevice->state() == QModbusDevice::ConnectedState) {
         m_modbusDevice->disconnectDevice();
         emit closed();
+    } else {
+        emit error("QUdpSocket release error!");
     }
 
     return true;
 }
 
 void QUModbusMaster::readRegisters(QModbusDataUnit::RegisterType registerType, qint8 id, qint16 registerAddress, qint16 registerCount) {
-    QModbusDataUnit readUnit = QModbusDataUnit(registerType, registerAddress, registerCount);
-
-    if (auto* reply = m_modbusDevice->sendReadRequest(readUnit, id)) {
-        if (!reply->isFinished()) {
-            connect(reply, &QModbusReply::finished, this, [this, registerType, reply]() { onReadReady(registerType, reply); });
-        } else {
-            reply->deleteLater();
+    if (m_modbusDevice) {
+        QModbusDataUnit readUnit = QModbusDataUnit(registerType, registerAddress, registerCount);
+        if (auto* reply = m_modbusDevice->sendReadRequest(readUnit, id)) {
+            if (!reply->isFinished()) {
+                connect(reply, &QModbusReply::finished, this, [this, registerType, reply]() {
+                    onReadReady(registerType, reply);
+                });
+            } else {
+                reply->deleteLater();
+            }
         }
+    } else {
+        emit error(QString("QModbusClient nullptr"));
     }
 }
 
 void QUModbusMaster::writeCoilRegisters(qint8 id, qint16 registerAddress, qint16 registerCount, QBitArray data) {
-    QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::Coils, registerAddress, registerCount);
-    for (uint i = 0; i < writeUnit.valueCount(); ++i) {
-        writeUnit.setValue(i, data[i]);
-    }
-
-    if (auto* reply = m_modbusDevice->sendWriteRequest(writeUnit, id)) {
-        if (!reply->isFinished()) {
-            connect(reply, &QModbusReply::finished, this, [this, reply]() { reply->deleteLater(); });
-        } else {
-            reply->deleteLater();
+    if (m_modbusDevice) {
+        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::Coils,
+                                                    registerAddress,
+                                                    registerCount);
+        for (uint i = 0; i < writeUnit.valueCount(); ++i) {
+            writeUnit.setValue(i, data[i]);
         }
+
+        if (auto* reply = m_modbusDevice->sendWriteRequest(writeUnit, id)) {
+            if (!reply->isFinished()) {
+                connect(reply, &QModbusReply::finished, this, [this, reply]() {
+                    reply->deleteLater();
+                });
+            } else {
+                reply->deleteLater();
+            }
+        }
+    } else {
+        emit error(QString("QModbusClient nullptr"));
     }
 }
 
 void QUModbusMaster::writeHoldingRegisters(qint8 id, qint16 registerAddress, qint16 registerCount, QList<quint16> data) {
-    QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, registerAddress, registerCount);
-    for (uint i = 0; i < writeUnit.valueCount(); ++i) {
-        writeUnit.setValue(i, data[i]);
-    }
-
-    if (auto* reply = m_modbusDevice->sendWriteRequest(writeUnit, id)) {
-        if (!reply->isFinished()) {
-            connect(reply, &QModbusReply::finished, this, [this, reply]() { reply->deleteLater(); });
-        } else {
-            reply->deleteLater();
+    if (m_modbusDevice) {
+        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters,
+                                                    registerAddress,
+                                                    registerCount);
+        for (uint i = 0; i < writeUnit.valueCount(); ++i) {
+            writeUnit.setValue(i, data[i]);
         }
+
+        if (auto* reply = m_modbusDevice->sendWriteRequest(writeUnit, id)) {
+            if (!reply->isFinished()) {
+                connect(reply, &QModbusReply::finished, this, [this, reply]() {
+                    reply->deleteLater();
+                });
+            } else {
+                reply->deleteLater();
+            }
+        }
+    } else {
+        emit error(QString("QModbusClient nullptr"));
     }
 }
 
@@ -111,19 +144,29 @@ void QUModbusMaster::readWriteHoldingRegisters(qint8 id,
     qint16 registerAddressWrite,
     qint16 registerCountWrite,
     QList<quint16> data) {
-    QModbusDataUnit readUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, registerAddressRead, registerCountRead);
+    if (m_modbusDevice) {
+        QModbusDataUnit readUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters,
+                                                   registerAddressRead,
+                                                   registerCountRead);
 
-    QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, registerAddressWrite, registerCountWrite);
-    for (uint i = 0; i < writeUnit.valueCount(); ++i) {
-        writeUnit.setValue(i, data[i]);
-    }
-
-    if (auto* reply = m_modbusDevice->sendReadWriteRequest(readUnit, writeUnit, id)) {
-        if (!reply->isFinished()) {
-            connect(reply, &QModbusReply::finished, this, [this, reply]() { onReadReady(QModbusDataUnit::HoldingRegisters, reply); });
-        } else {
-            reply->deleteLater();
+        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters,
+                                                    registerAddressWrite,
+                                                    registerCountWrite);
+        for (uint i = 0; i < writeUnit.valueCount(); ++i) {
+            writeUnit.setValue(i, data[i]);
         }
+
+        if (auto* reply = m_modbusDevice->sendReadWriteRequest(readUnit, writeUnit, id)) {
+            if (!reply->isFinished()) {
+                connect(reply, &QModbusReply::finished, this, [this, reply]() {
+                    onReadReady(QModbusDataUnit::HoldingRegisters, reply);
+                });
+            } else {
+                reply->deleteLater();
+            }
+        }
+    } else {
+        emit error(QString("QModbusClient nullptr"));
     }
 }
 

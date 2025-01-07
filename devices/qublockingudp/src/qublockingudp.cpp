@@ -27,6 +27,12 @@ bool QUBlockingUdp::acquire() {
 
     m_udpSocket = QSharedPointer<QUdpSocket>::create();
 
+    if (!m_udpSocket) {
+        emit opened(false);
+        emit error(QString("Cannot create QUdpSocket!"));
+        return false;
+    }
+
     m_waitTimeout = cfg->waitTimeout();
     bindMode      = QAbstractSocket::BindMode(cfg->bindMode());
     m_serverIp.setAddress(cfg->serverIp());
@@ -49,36 +55,49 @@ qint64 QUBlockingUdp::write(QByteArray data) {
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingSerialPort::write" << m_name;
 #endif
-    qint64 size = m_udpSocket->writeDatagram(data, data.size(), m_clientIp, m_clientPort);
-    m_udpSocket->waitForBytesWritten(m_waitTimeout);
-
-    return size;
+    if (m_udpSocket) {
+        qint64 size = m_udpSocket->writeDatagram(data, data.size(), m_clientIp, m_clientPort);
+        m_udpSocket->waitForBytesWritten(m_waitTimeout);
+        return size;
+    } else {
+        emit error(QString("QUdpSocket nullptr"));
+        return -1;
+    }
 }
 
 QByteArray QUBlockingUdp::read() {
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingUdp::read" << m_name;
 #endif
-    QByteArray data;
-    if (m_udpSocket->waitForReadyRead(m_waitTimeout)) {
-        while (m_udpSocket->hasPendingDatagrams()) {
-            QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
-            if (datagram.isValid()) {
-                data += datagram.data();
+    if (m_udpSocket) {
+        QByteArray data;
+        if (m_udpSocket->waitForReadyRead(m_waitTimeout)) {
+            while (m_udpSocket->hasPendingDatagrams()) {
+                QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
+                if (datagram.isValid()) {
+                    data += datagram.data();
+                }
             }
         }
+        return data;
+    } else {
+        emit error(QString("QUdpSocket nullptr"));
+        return QByteArray();
     }
-
-    return data;
 }
 
-void QUBlockingUdp::release() {
+bool QUBlockingUdp::release()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingUdp::release" << m_name;
 #endif
-    if (m_udpSocket->isOpen()) {
+    if (m_udpSocket && m_udpSocket->isOpen()) {
         m_udpSocket->close();
         emit closed();
+        return true;
+    } else {
+        emit error("QUdpSocket release error!");
+        return false;
     }
 }
 

@@ -26,6 +26,12 @@ bool QUBlockingSerialPort::acquire() {
 
     m_port = QSharedPointer<QSerialPort>::create();
 
+    if (!m_port) {
+        emit opened(false);
+        emit error(QString("Cannot create QSerialPort!"));
+        return false;
+    }
+
     m_waitTimeout = cfg->waitTimeout();
     m_port->setPort(cfg->portInfo());
     m_port->setPortName(cfg->portName());
@@ -60,31 +66,44 @@ qint64 QUBlockingSerialPort::write(QByteArray data) {
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingSerialPort::write" << m_name;
 #endif
-    qint64 size = m_port->write(data);
-    m_port->waitForBytesWritten(m_waitTimeout);
-
-    return size;
+    if (m_port) {
+        qint64 size = m_port->write(data);
+        m_port->waitForBytesWritten(m_waitTimeout);
+        return size;
+    } else {
+        emit error(QString("QSerialPort nullptr"));
+        return -1;
+    }
 }
 
 QByteArray QUBlockingSerialPort::read() {
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingSerialPort::read" << m_name;
 #endif
-    QByteArray data;
-    if (m_port->waitForReadyRead(m_waitTimeout)) {
-        data += m_port->readAll();
+    if (m_port) {
+        QByteArray data;
+        if (m_port->waitForReadyRead(m_waitTimeout)) {
+            data += m_port->readAll();
+        }
+        return data;
+    } else {
+        emit error(QString("QSerialPort nullptr"));
+        return QByteArray();
     }
-
-    return data;
 }
 
-void QUBlockingSerialPort::release() {
+bool QUBlockingSerialPort::release()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingSerialPort::release" << m_name;
 #endif
-    if (m_port->isOpen()) {
+    if (m_port && m_port->isOpen()) {
         m_port->close();
         emit closed();
+        return true;
+    } else {
+        emit error("QSerialPort release error!");
+        return false;
     }
 }
 

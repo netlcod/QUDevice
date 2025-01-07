@@ -23,28 +23,48 @@ QHostAddress QUTcpClient::clientAddress() const {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::clientAddress" << m_name;
 #endif
-    return m_tcpSocket->localAddress();
+    if (m_tcpSocket) {
+        return m_tcpSocket->localAddress();
+    } else {
+        emit error(QString("QTcpSocket nullptr"));
+        return QHostAddress();
+    }
 }
 
 int QUTcpClient::clientPort() const {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::clientPort" << m_name;
 #endif
-    return m_tcpSocket->localPort();
+    if (m_tcpSocket) {
+        return m_tcpSocket->localPort();
+    } else {
+        emit error(QString("QTcpSocket nullptr"));
+        return -1;
+    }
 }
 
 QHostAddress QUTcpClient::serverAddress() const {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::serverAddress" << m_name;
 #endif
-    return m_tcpSocket->peerAddress();
+    if (m_tcpSocket) {
+        return m_tcpSocket->peerAddress();
+    } else {
+        emit error(QString("QTcpSocket nullptr"));
+        return QHostAddress();
+    }
 }
 
 int QUTcpClient::serverPort() const {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::serverPort" << m_name;
 #endif
-    return m_tcpSocket->peerPort();
+    if (m_tcpSocket) {
+        return m_tcpSocket->peerPort();
+    } else {
+        emit error(QString("QTcpSocket nullptr"));
+        return -1;
+    }
 }
 
 bool QUTcpClient::acquire() {
@@ -55,18 +75,20 @@ bool QUTcpClient::acquire() {
 
     m_tcpSocket = QSharedPointer<QTcpSocket>(new QTcpSocket, [](QTcpSocket* obj) { obj->deleteLater(); });
 
+    if (!m_tcpSocket) {
+        emit error(QString("Cannot create QTcpSocket!"));
+        return false;
+    }
+
     m_hostIp.setAddress(cfg->hostIp());
     m_hostPort = cfg->hostPort().toInt();
 
     connect(m_tcpSocket.get(), &QTcpSocket::readyRead, this, &QUTcpClient::onReceiveData);
     connect(m_tcpSocket.get(), &QTcpSocket::errorOccurred, this, &QUTcpClient::onErrorOccurred);
 
-    bool status = false;
     m_tcpSocket->connectToHost(m_hostIp, m_hostPort);
 
-    if (m_tcpSocket->waitForConnected()) {
-        status = true;
-    }
+    bool status = m_tcpSocket->waitForConnected();
     emit opened(status);
 
     return status;
@@ -76,16 +98,26 @@ qint64 QUTcpClient::write(QByteArray data) {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::write" << m_name;
 #endif
-    return m_tcpSocket->write(data, data.size());
+    if (m_tcpSocket) {
+        return m_tcpSocket->write(data, data.size());
+    } else {
+        emit error(QString("QTcpSocket nullptr"));
+        return -1;
+    }
 }
 
-void QUTcpClient::release() {
+bool QUTcpClient::release()
+{
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::release" << m_name;
 #endif
-    if (m_tcpSocket->isOpen()) {
+    if (m_tcpSocket && m_tcpSocket->isOpen()) {
         m_tcpSocket->close();
         emit closed();
+        return true;
+    } else {
+        emit error("QUTcpClient release error!");
+        return false;
     }
 }
 

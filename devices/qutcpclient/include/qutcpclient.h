@@ -23,7 +23,7 @@ public:
 public slots:
     bool acquire();
     qint64 write(QByteArray data);
-    void release();
+    bool release();
 
 private slots:
     void onReceiveData();
@@ -32,7 +32,7 @@ private slots:
 signals:
     void opened(bool status);
     void closed();
-    void error(const QString error);
+    void error(const QString error) const;
     void outputBytes(const QByteArray data);
 
 private:

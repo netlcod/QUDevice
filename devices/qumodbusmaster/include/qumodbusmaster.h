@@ -38,7 +38,7 @@ private slots:
 signals:
     void opened(bool status);
     void closed();
-    void error(const QString error);
+    void error(const QString error) const;
     void readFinished(QStringList values);
     void readFinished(qint16 registerAddress, QBitArray values);
     void readFinished(qint16 registerAddress, QList<quint16> values);
