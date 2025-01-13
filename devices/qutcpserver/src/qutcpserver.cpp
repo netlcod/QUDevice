@@ -63,24 +63,23 @@ qint64 QUTcpServer::write(QString client, QByteArray data) {
     }
 }
 
-bool QUTcpServer::release()
-{
+bool QUTcpServer::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpServer::release" << m_name;
 #endif
     if (m_tcpServer && m_tcpServer->isListening()) {
         m_clients.clear();
         m_tcpServer->close();
-        emit closed();
+        emit closed(true);
         return true;
     } else {
         emit error("QTcpServer release error!");
+        emit closed(false);
         return false;
     }
 }
 
-void QUTcpServer::onNewConnection()
-{
+void QUTcpServer::onNewConnection() {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpServer::onNewConnection" << m_name;
 #endif

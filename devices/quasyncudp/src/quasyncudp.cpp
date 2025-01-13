@@ -63,17 +63,17 @@ qint64 QUAsyncUdp::write(QByteArray data) {
     }
 }
 
-bool QUAsyncUdp::release()
-{
+bool QUAsyncUdp::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUAsyncUdp::release" << m_name;
 #endif
     if (m_udpSocket && m_udpSocket->isOpen()) {
         m_udpSocket->close();
-        emit closed();
+        emit closed(true);
         return true;
     } else {
         emit error("QUdpSocket release error!");
+        emit closed(false);
         return false;
     }
 }

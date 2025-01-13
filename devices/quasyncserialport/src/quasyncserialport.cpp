@@ -74,17 +74,17 @@ qint64 QUAsyncSerialPort::write(QByteArray data) {
     }
 }
 
-bool QUAsyncSerialPort::release()
-{
+bool QUAsyncSerialPort::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUAsyncSerialPort::release" << m_name;
 #endif
     if (m_port && m_port->isOpen()) {
         m_port->close();
-        emit closed();
+        emit closed(true);
         return true;
     } else {
         emit error("QSerialPort release error!");
+        emit closed(false);
         return false;
     }
 }

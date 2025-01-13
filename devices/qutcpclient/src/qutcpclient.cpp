@@ -106,17 +106,17 @@ qint64 QUTcpClient::write(QByteArray data) {
     }
 }
 
-bool QUTcpClient::release()
-{
+bool QUTcpClient::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUTcpClient::release" << m_name;
 #endif
     if (m_tcpSocket && m_tcpSocket->isOpen()) {
         m_tcpSocket->close();
-        emit closed();
+        emit closed(true);
         return true;
     } else {
         emit error("QUTcpClient release error!");
+        emit closed(false);
         return false;
     }
 }

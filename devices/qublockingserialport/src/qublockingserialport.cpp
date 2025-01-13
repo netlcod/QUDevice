@@ -92,17 +92,17 @@ QByteArray QUBlockingSerialPort::read() {
     }
 }
 
-bool QUBlockingSerialPort::release()
-{
+bool QUBlockingSerialPort::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingSerialPort::release" << m_name;
 #endif
     if (m_port && m_port->isOpen()) {
         m_port->close();
-        emit closed();
+        emit closed(true);
         return true;
     } else {
         emit error("QSerialPort release error!");
+        emit closed(false);
         return false;
     }
 }

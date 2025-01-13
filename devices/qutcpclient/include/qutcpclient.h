@@ -31,7 +31,7 @@ private slots:
 
 signals:
     void opened(bool status);
-    void closed();
+    void closed(bool status);
     void error(const QString error) const;
     void outputBytes(const QByteArray data);
 

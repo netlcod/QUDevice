@@ -86,17 +86,17 @@ QByteArray QUBlockingUdp::read() {
     }
 }
 
-bool QUBlockingUdp::release()
-{
+bool QUBlockingUdp::release() {
 #ifdef QT_DEBUG
     qDebug() << "QUBlockingUdp::release" << m_name;
 #endif
     if (m_udpSocket && m_udpSocket->isOpen()) {
         m_udpSocket->close();
-        emit closed();
+        emit closed(true);
         return true;
     } else {
         emit error("QUdpSocket release error!");
+        emit closed(false);
         return false;
     }
 }

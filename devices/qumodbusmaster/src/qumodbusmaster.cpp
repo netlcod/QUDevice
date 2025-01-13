@@ -67,12 +67,13 @@ bool QUModbusMaster::release() {
 #endif
     if (m_modbusDevice && m_modbusDevice->state() == QModbusDevice::ConnectedState) {
         m_modbusDevice->disconnectDevice();
-        emit closed();
+        emit closed(true);
+        return true;
     } else {
         emit error("QUdpSocket release error!");
+        emit closed(false);
+        return false;
     }
-
-    return true;
 }
 
 void QUModbusMaster::readRegisters(QModbusDataUnit::RegisterType registerType, qint8 id, qint16 registerAddress, qint16 registerCount) {
@@ -80,9 +81,7 @@ void QUModbusMaster::readRegisters(QModbusDataUnit::RegisterType registerType, q
         QModbusDataUnit readUnit = QModbusDataUnit(registerType, registerAddress, registerCount);
         if (auto* reply = m_modbusDevice->sendReadRequest(readUnit, id)) {
             if (!reply->isFinished()) {
-                connect(reply, &QModbusReply::finished, this, [this, registerType, reply]() {
-                    onReadReady(registerType, reply);
-                });
+                connect(reply, &QModbusReply::finished, this, [this, registerType, reply]() { onReadReady(registerType, reply); });
             } else {
                 reply->deleteLater();
             }
@@ -94,18 +93,14 @@ void QUModbusMaster::readRegisters(QModbusDataUnit::RegisterType registerType, q
 
 void QUModbusMaster::writeCoilRegisters(qint8 id, qint16 registerAddress, qint16 registerCount, QBitArray data) {
     if (m_modbusDevice) {
-        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::Coils,
-                                                    registerAddress,
-                                                    registerCount);
+        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::Coils, registerAddress, registerCount);
         for (uint i = 0; i < writeUnit.valueCount(); ++i) {
             writeUnit.setValue(i, data[i]);
         }
 
         if (auto* reply = m_modbusDevice->sendWriteRequest(writeUnit, id)) {
             if (!reply->isFinished()) {
-                connect(reply, &QModbusReply::finished, this, [this, reply]() {
-                    reply->deleteLater();
-                });
+                connect(reply, &QModbusReply::finished, this, [this, reply]() { reply->deleteLater(); });
             } else {
                 reply->deleteLater();
             }
@@ -117,18 +112,14 @@ void QUModbusMaster::writeCoilRegisters(qint8 id, qint16 registerAddress, qint16
 
 void QUModbusMaster::writeHoldingRegisters(qint8 id, qint16 registerAddress, qint16 registerCount, QList<quint16> data) {
     if (m_modbusDevice) {
-        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters,
-                                                    registerAddress,
-                                                    registerCount);
+        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, registerAddress, registerCount);
         for (uint i = 0; i < writeUnit.valueCount(); ++i) {
             writeUnit.setValue(i, data[i]);
         }
 
         if (auto* reply = m_modbusDevice->sendWriteRequest(writeUnit, id)) {
             if (!reply->isFinished()) {
-                connect(reply, &QModbusReply::finished, this, [this, reply]() {
-                    reply->deleteLater();
-                });
+                connect(reply, &QModbusReply::finished, this, [this, reply]() { reply->deleteLater(); });
             } else {
                 reply->deleteLater();
             }
@@ -145,22 +136,16 @@ void QUModbusMaster::readWriteHoldingRegisters(qint8 id,
     qint16 registerCountWrite,
     QList<quint16> data) {
     if (m_modbusDevice) {
-        QModbusDataUnit readUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters,
-                                                   registerAddressRead,
-                                                   registerCountRead);
+        QModbusDataUnit readUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, registerAddressRead, registerCountRead);
 
-        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters,
-                                                    registerAddressWrite,
-                                                    registerCountWrite);
+        QModbusDataUnit writeUnit = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, registerAddressWrite, registerCountWrite);
         for (uint i = 0; i < writeUnit.valueCount(); ++i) {
             writeUnit.setValue(i, data[i]);
         }
 
         if (auto* reply = m_modbusDevice->sendReadWriteRequest(readUnit, writeUnit, id)) {
             if (!reply->isFinished()) {
-                connect(reply, &QModbusReply::finished, this, [this, reply]() {
-                    onReadReady(QModbusDataUnit::HoldingRegisters, reply);
-                });
+                connect(reply, &QModbusReply::finished, this, [this, reply]() { onReadReady(QModbusDataUnit::HoldingRegisters, reply); });
             } else {
                 reply->deleteLater();
             }
